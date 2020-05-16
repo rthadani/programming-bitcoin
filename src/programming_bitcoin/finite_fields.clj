@@ -28,10 +28,12 @@
                               (mod prime) 
                               int
                               (FieldElement. prime))))
-  (powf [this exp] (FieldElement. ()(int (powmod num exp prime)) prime)))
+  (powf [this exp] (FieldElement. (let [exp (mod exp (dec prime))] 
+                                    (int (powmod num exp prime))) 
+                                  prime)))
 
 (defn make-field-element [num prime]
-  (if (<= num prime)
+  (if (and (< num prime) (> num 0))
     (FieldElement. num prime)
     nil))
 
