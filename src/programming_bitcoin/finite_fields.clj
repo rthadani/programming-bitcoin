@@ -12,7 +12,7 @@
 
 (defn powmod [b e m]
   (->> (repeat e b) 
-       (reduce (fn [r b] (println r b) (mod (* r b) m)) 1)))
+       (reduce (fn [r b]  (mod (* r b) m)) 1)))
 
 (defrecord FieldElement [num prime]
   FieldElementOp
@@ -32,10 +32,18 @@
                                     (int (powmod num exp prime))) 
                                   prime)))
 
+;;Fermat's test for primes
+(defn prime?
+  [p]
+  (->> (repeatedly #(inc (rand-int (dec p))))
+       (take 50)
+       (every? #(= (powmod % p p) %))))
+
 (defn make-field-element [num prime]
-  (if (and (< num prime) (> num 0))
+  (if (and (prime? prime) (< num prime) (>= num 0))
     (FieldElement. num prime)
     nil))
+
 
 
 #_ (make-field-element 7 19)
