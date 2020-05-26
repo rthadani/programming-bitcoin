@@ -5,7 +5,8 @@
   (-f [f1 f2])
   (*f [f1 f2])
   (divf [f1 f2])
-  (powf [f1 exp]))
+  (powf [f exp])
+  (zerof? [f]))
 
 (defn same-set? [f1 f2]
   (= (:prime f1) (:prime f2)))
@@ -16,12 +17,13 @@
 
 (defrecord FieldElement [num prime]
   FieldElementOp
-  (+f [this other] (and (same-set? this other) 
+  (+f [this other] (println this other) (and (same-set? this other) 
                         (FieldElement. (mod (+ num (:num other)) prime) prime)))
   (-f [this other] (and (same-set? this other) 
                         (FieldElement. (mod (- num (:num other)) prime) prime)))
-  (*f [this other] (and (same-set? this other) 
-                        (FieldElement. (mod (* num (:num other)) prime) prime)))
+  (*f [this other] (if (number? other)
+                     (FieldElement. (mod (* num other) prime) prime)
+                     (and (same-set? this other) (FieldElement. (mod (* num (:num other)) prime) prime))))
   (divf [this other] (and (same-set? this other) 
                           (-> (powmod (:num other) (- prime 2) prime)
                               (* num)
@@ -30,7 +32,8 @@
                               (FieldElement. prime))))
   (powf [this exp] (FieldElement. (let [exp (mod exp (dec prime))] 
                                     (int (powmod num exp prime))) 
-                                  prime)))
+                                  prime))
+  (zerof? [_] (zero? (mod num prime))))
 
 ;;Fermat's test for primes
 (defn prime?
@@ -50,6 +53,7 @@
 #_ (same-set? (make-field-element 7 19) (make-field-element 8 19))
 #_ (+f (make-field-element 7 13) (make-field-element 12 13))
 #_ (*f (make-field-element 3 13) (make-field-element 12 13))
+#_ (*f (make-field-element 3 13) 3)
 #_ (powf (make-field-element 3 13) 3)
 #_ (powmod 5 2 3)
 #_ (divf (make-field-element 2 19) (make-field-element 7 19))
