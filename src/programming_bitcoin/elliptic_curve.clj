@@ -2,7 +2,6 @@
   (:require [clojure.math.numeric-tower :as nt]
             [programming-bitcoin.finite-fields :refer [FieldElementOp + - * / ** zero?]]))
 
-
 (defprotocol PointOp
   (pid [pt])
   (p+ [p1 p2])
@@ -13,12 +12,11 @@
   (and (= (:a p1) (:a p2))
        (= (:b p1) (:b p2))))
 
-
 (extend-type Number
   FieldElementOp
   (+ [this other] (clojure.core/+ this other))
   (- [this other] (clojure.core/- this other))
-  (* [this other] (clojure.core/* this other))
+  (* [this other] (if (number? other)  (clojure.core/* this other) (scalar* other this)))
   (/ [this other] (int (clojure.core// this other)))
   (** [this exp] (nt/expt this exp))
   (zero? [this] (clojure.core/zero? this)))
@@ -49,8 +47,8 @@
                   result (pid this)]
              (cond
                (zero? coeff) result
-               (zero? (bit-and coeff 1))  (recur (bit-shift-right coeff 1) (p+ current current) result)
-               :else (recur (bit-shift-right coeff 1) (p+ current current) (p+ result current))))))
+               (even? coeff)  (recur (quot coeff 2) (p+ current current) result)
+               :else (recur (quot coeff 2) (p+ current current) (p+ result current))))))
 
 
 (defn make-point
