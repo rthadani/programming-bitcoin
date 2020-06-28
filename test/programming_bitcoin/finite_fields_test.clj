@@ -12,13 +12,13 @@
 
 (facts "Finite fields - Exercise 8"       
        (fact "Division"
-             (divf (make-field-element 3 31) (make-field-element 24 31)) => {:num 4 :prime 31})
+             (/ (make-field-element 3 31) (make-field-element 24 31)) => {:num 4 :prime 31})
        (fact "negative Exponent"
-            (powf (make-field-element 17 31) -3) => {:num 29 :prime 31})
+            (** (make-field-element 17 31) -3) => {:num 29 :prime 31})
        (fact "Complex op"
              (-> (make-field-element 4 31)
-                 (powf -4)
-                 (*f (make-field-element 11 31))) => {:num 13 :prime 31}))
+                 (** -4)
+                 (* (make-field-element 11 31))) => {:num 13 :prime 31}))
 
 
 
