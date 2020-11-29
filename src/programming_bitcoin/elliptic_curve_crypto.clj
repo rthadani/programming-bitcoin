@@ -93,10 +93,6 @@
       (->Signature r (- N s))
       (->Signature r s))))
 
-
-
-
-
 #_ (println (* N G))
 #_ (def prime 223)
 #_ (def a (f/->FieldElement 0 prime))
