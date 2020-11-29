@@ -33,13 +33,13 @@
         (= this p2)  (if (zero? y)
                        (pid this)
                        (let [s  (/ (+ (* (** x 2) 3) a) (* y 2))
-                             x3 (- (* s s) (* x 2))
+                             x3 (- (** s 2) (* x 2))
                              y3 (- (* s (- x x3)) y)]
                          (Point. x3 y3 a b)))
         :else (if (= x (:x p2))
                 (pid this)
                 (let [s  (/ (- (:y p2) y) (- (:x p2) x))
-                      x3 (- (- (* s s) x) (:x p2))]
+                      x3 (- (- (** s 2) x) (:x p2))]
                   (Point. x3 (- (* s (- x x3)) y) a b)))))
   (scalar* [this scalar]
            (loop [coeff scalar
@@ -48,25 +48,33 @@
              (cond
                (zero? coeff) result
                (even? coeff)  (recur (quot coeff 2) (p+ current current) result)
-               :else (recur (quot coeff 2) (p+ current current) (p+ result current))))))
+               :else (recur (quot coeff 2) (p+ current current) (p+ result current)))))
+  FieldElementOp
+  (+ [this other] 
+     (p+ this other))
+  (* 
+   [this other] (when (number? other) (scalar* this other))))
 
 
 (defn ->Point
   [x y a b]
-  (when (= (** y 2) (+ (+ (** x 3) (* a x)) b))
+  (when (or (nil? x) (nil? y) (= (** y 2) (+ (+ (** x 3) (* a x)) b)))
     (Point. x y a b)))
 
 (defn valid? 
   [x y a b]
   (some? (->Point x y a b)))
 
+(defn order-group
+  [pt]
+  (count (take-while #(not (=  pt (second %))) (iterate (fn [[i r]] [(inc i) (scalar* pt i)]) [2 nil]))))
 
-#_ (p+ (->Point 2 5 5 7) (->Point -1 -1 5 7))
+#_ (+ (->Point 2 5 5 7) (->Point -1 -1 5 7))
 ;;Execrcise 4
-#_ (p+ (->Point 2 5 5 7) (->Point -1 -1 5 7))
+#_ (+ (->Point 2 5 5 7) (->Point -1 -1 5 7))
 
 ;;Exercise 6
-#_ (p+ (->Point -1 -1 5 7) (->Point -1 -1 5 7))
+#_ (+ (->Point -1 -1 5 7) (->Point -1 -1 5 7))
 
 #_ (** 2 2)
 

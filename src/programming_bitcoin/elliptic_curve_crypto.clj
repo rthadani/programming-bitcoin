@@ -5,24 +5,28 @@
             [programming-bitcoin.finite-fields :as f  :refer [+ - *]]
             [programming-bitcoin.elliptic-curve :as p]))
 
+(def P (clojure.core/- (nt/expt 2 256) (nt/expt 2 32) 977))
+
 (defn ->S256-Field
   [num]
-  (let [prime (clojure.core/- (nt/expt 2 256) (nt/expt 2 32) 977)]
+  (let [prime P]
     #_(assert (.isProbablePrime prime 1))
     (f/->FieldElement num prime)))
 
 
+(def A (->S256-Field 0))
+(def B (->S256-Field 7))
+
 (defn ->S256-Point
   [x y]
-  (let [a (->S256-Field 0)
-        b (->S256-Field 7)
-        x (->S256-Field x)
-        y (->S256-Field y)]
-    (p/->Point x y a b)))
+  (let [x (if (number? x)(->S256-Field x) x)
+        y (if (number? y)(->S256-Field y) y)]
+    (p/->Point x y A B)))
 
 (def N 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141)
 (def G (->S256-Point 0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798
                  0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8))
+
 ;;helpers
 (defn hash-256
   [m]
@@ -30,12 +34,12 @@
 
 (defn number->bytes ;;big-endian encoding python to_bytes
   [n length]
-  (let [byte-array     (.toByteArray (biginteger n))
-        byte-array-len (count byte-array)
+  (let [ba     (.toByteArray (biginteger n))
+        byte-array-len (count ba)
         zeroes         (repeat (- length byte-array-len) (byte 0))]
     (if (> byte-array-len length)
-      (byte-array (drop (- byte-array-len length) (seq byte-array)))
-      (byte-array (concat zeroes byte-array)))))
+      (byte-array (drop (- byte-array-len length) (seq ba)))
+      (byte-array (concat zeroes ba)))))
 
 (defn bytes->number
   [b]
@@ -55,13 +59,13 @@
   (let [s-inv (f/powmod s (- N 2) N)
         u (mod (* z s-inv) N)
         v (mod (* r s-inv) N)
-        total (p/p+ (* v public-key)(* u G)) ]
+        total (+ (* v public-key)(* u G)) ]
     (= (get-in total [:x :num]) r)))
 
 (defrecord Signature [r s])
 (defrecord PrivateKey [secret point]) 
 (defn ->PrivateKey [secret]
-  (PrivateKey. secret (* G secret)))
+  (PrivateKey. secret (* secret G)))
 
 (defn deterministic-k 
   [secret z]
@@ -92,53 +96,3 @@
     (if (> s (quot N 2)) 
       (->Signature r (- N s))
       (->Signature r s))))
-
-#_ (println (* N G))
-#_ (def prime 223)
-#_ (def a (f/->FieldElement 0 prime))
-#_ (def b (f/->FieldElement 7 prime))
-#_ (def x1 (f/->FieldElement 192 prime))
-#_ (def y1 (f/->FieldElement 105 prime))
-#_ (def x2 (f/->FieldElement 17 prime))
-#_ (def y2 (f/->FieldElement 56 prime))
-#_ (def p1 (p/->Point x1 y1 a b) )
-#_ (def p2 (p/->Point x2 y2 a b) )
-
-;;Exercise 1
-#_ (p/p+ p1 p2)
-#_ (p/scalar* p1 2)
-#_ (let [prime 223
-         a (f/->FieldElement 0 prime)
-         b (f/->FieldElement 7 prime)
-         x (f/->FieldElement 47 prime)
-         y (f/->FieldElement 71 prime)
-         point (p/->Point x y a b)]
-     (p/scalar* point 2))
-
-
-;;Exercise 5
-#_ (def x3 (f/->FieldElement 15 prime))
-#_ (def y3 (f/->FieldElement 86 prime))
-#_ (def pt (p/->Point x3 y3 a b))
-#_ (count (take-while #(not (=  pt (second %))) (iterate (fn [[i r]] [(inc i) (p/scalar* pt i)]) [2 nil])))
-
-;;Exercise 6
-#_ (def P (->S256-Point 0x887387e452b8eacc4acfde10d9aaf7f6d9a0f975aabb10d006e4da568744d06c
-                      0x61de6d95231cd89026e286df3b6ae4a894a3378e393e93a0f45b666329a0ae34))
-#_ (def z 0xec208baa0fc1c19f708a9ca96fdeff3ac3f230bb4a7ba4aede4942ad003c0f60)
-#_ (def sig (->Signature  0xac8d1c87e51d0d441be8b3dd5b05c8795b48875dffe00b7ffcfac23010d3a395 
-                          0x68342ceff8935ededd102dd876ffd6ba72d6a427a3edb13d26eb0781cb423c4))
-#_ (verify-signature P z sig)
-
-#_ (let [z 0x7c076ff316692a3d7eb3c3bb0f8b1488cf72e1afcd929e29307032997a838a3d
-         sig (->Signature 0xeff69ef2b1bd93a66ed5219add4fb51e11a840f404876325a1e8ffe0529a2c 0xc7207fee197d27c618aea621406f6bf5ef6fca38681d82b2f06fddbdce6feab6)]
-     (verify-signature P z sig))
-
-;;Exercise 7
-#_ (let [e 12345
-         z (bytes->number (hash-256 "Programming Bitcoin!"))
-         k 1234567890
-         r (get-in (* k G) [:x :num])
-         k-inv (f/powmod k (- N 2) N)
-         s (mod (* (+ z (* e r)) k-inv) N)]
-     (println (pprint-s256-point (* e G)) (hex64 z) (hex64 r) (hex64 s)))
