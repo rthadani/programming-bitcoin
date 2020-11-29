@@ -6,11 +6,11 @@
 #_(tabular "ECC Scalar multiplication"
        (fact "Exercise 4"
              (let [prime 223
-                   a (make-field-element 0 prime)
-                   b (make-field-element 7 prime)
-                   x (make-field-element 47 prime)
-                   y (make-field-element 71 prime)
-                   point (make-point x y a b)]
+                   a (->FieldElement 0 prime)
+                   b (->FieldElement 7 prime)
+                   x (->FieldElement 47 prime)
+                   y (->FieldElement 71 prime)
+                   point (->Point x y a b)]
                (scalar* point ?scalar) => ?expected
                
                ?scalar  ?expected

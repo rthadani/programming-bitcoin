@@ -51,25 +51,25 @@
                :else (recur (quot coeff 2) (p+ current current) (p+ result current))))))
 
 
-(defn make-point
+(defn ->Point
   [x y a b]
   (when (= (** y 2) (+ (+ (** x 3) (* a x)) b))
     (Point. x y a b)))
 
 (defn valid? 
   [x y a b]
-  (some? (make-point x y a b)))
+  (some? (->Point x y a b)))
 
 
-#_ (p+ (make-point 2 5 5 7) (make-point -1 -1 5 7))
+#_ (p+ (->Point 2 5 5 7) (->Point -1 -1 5 7))
 ;;Execrcise 4
-#_ (p+ (make-point 2 5 5 7) (make-point -1 -1 5 7))
+#_ (p+ (->Point 2 5 5 7) (->Point -1 -1 5 7))
 
 ;;Exercise 6
-#_ (p+ (make-point -1 -1 5 7) (make-point -1 -1 5 7))
+#_ (p+ (->Point -1 -1 5 7) (->Point -1 -1 5 7))
 
 #_ (** 2 2)
 
-#_ (scalar* (make-point 2 5 5 7) 2) 
+#_ (scalar* (->Point 2 5 5 7) 2) 
 
 
