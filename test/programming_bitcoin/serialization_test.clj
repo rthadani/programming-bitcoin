@@ -27,3 +27,11 @@
          "7c076ff316692a3d7eb3c3bb0f8b1488cf72e1afcd929e29307032997a838a3d" "9MA8fRQrT4u8Zj8ZRd6MAiiyaxb2Y1CMpvVkHQu5hVM6"
          "eff69ef2b1bd93a66ed5219add4fb51e11a840f404876325a1e8ffe0529a2c" "4fE3H2E6XMp4SsxtwinF7w9a34ooUrwWe4WsW1458Pd"
          "c7207fee197d27c618aea621406f6bf5ef6fca38681d82b2f06fddbdce6feab6" "EQJsjkd6JaGwxrjEhfeqPenqHwrBmPQZjJGNSCHBkcF7")
+
+(tabular "Exercise 5"
+         (fact "addresses for private key"
+               (point->address (:point (->PrivateKey ?secret)) :compressed? ?compressed :testnet? ?testnet) => ?expected)
+         ?secret ?compressed ?testnet ?expected
+         5002 false true "mmTPbXQFxboEtNRkwfh6K51jvdtHLxGeMA"
+         (biginteger (Math/pow 2020 5)) true true "mopVkxp8UhXqRYbCYJsbeE1h1fiF64jcoH"
+         (biginteger 0x12345deadbeef) true false "1F1Pn2y6pDb68E5nYJJeba4TLg2U7B6KF1")

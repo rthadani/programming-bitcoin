@@ -1,9 +1,9 @@
 (ns  programming-bitcoin.elliptic-curve-crypto
   (:require [clojure.math.numeric-tower :as nt]
-            [buddy.core.hash :as hash]
             [buddy.core.mac :as mac]
             [programming-bitcoin.finite-fields :as f  :refer [+ - *]]
-            [programming-bitcoin.elliptic-curve :as p]))
+            [programming-bitcoin.elliptic-curve :as p]
+            [programming-bitcoin.helper :refer [number->bytes bytes->number]]))
 
 (def P (clojure.core/- (nt/expt 2 256) (nt/expt 2 32) 977))
 
@@ -28,27 +28,6 @@
                  0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8))
 
 ;;helpers
-(defn hash-256
-  [m]
-  (hash/sha256  (hash/sha256 m)))
-
-(defn number->bytes ;;big-endian encoding python to_bytes
-  [n length]
-  (let [ba     (.toByteArray (biginteger n))
-        byte-array-len (count ba)
-        zeroes         (repeat (- length byte-array-len) (byte 0))]
-    (if (> byte-array-len length)
-      (byte-array (drop (- byte-array-len length) (seq ba)))
-      (byte-array (concat zeroes ba)))))
-
-(defn bytes->number
-  [b]
-  (biginteger (byte-array (into [0] b))))
-
-(defn hex64 
-  [n] 
-  (format "0x%064x" (biginteger n)))
-
 (defn pprint-s256-point
   [{:keys [x y]}]
    (str "S256-Point(" (f/pprint-field x) ","  (f/pprint-field y) ")"))

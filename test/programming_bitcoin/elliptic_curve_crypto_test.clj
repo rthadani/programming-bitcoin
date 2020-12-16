@@ -1,6 +1,7 @@
 (ns programming-bitcoin.elliptic-curve-crypto-test
   (:require [midje.sweet :refer :all]
             [programming-bitcoin.elliptic-curve :refer :all]
+            [programming-bitcoin.helper :refer :all]
             [programming-bitcoin.finite-fields :refer :all]
             [programming-bitcoin.elliptic-curve-crypto :refer :all]))
 (let [prime 223
