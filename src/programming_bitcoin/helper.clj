@@ -1,5 +1,7 @@
 (ns programming-bitcoin.helper
-            (:require [buddy.core.hash :as hash]))
+  (:require [buddy.core.hash :as hash]
+            [clojure.java.io :as io])
+  (:import java.io.InputStream))
 
 (defn hash-256
   [m]
@@ -40,3 +42,25 @@
   "little endian decoding" 
   [b]
   (bytes->number (reverse b)))
+
+(defn read-bytes 
+  [^InputStream stream length]
+  (byte-array (for [_ (range length)] (.read stream))))
+
+(defn read-varint
+  [^InputStream s]
+  (let [i (.read s)]
+    (case i
+      0xfd (le-bytes->number (read-bytes s 2))
+      0xfe (le-bytes->number (read-bytes s 4))
+      0xff (le-bytes->number (read-bytes s 8))
+      i)))
+
+(defn encode-varint
+  [i]
+  (condp #(< i %)
+         0xfd (byte-array [(unchecked-byte i)])
+         0x10000 (byte-array (cons (unchecked-byte 0xfd) (number->le-bytes i 2)))
+         0x100000000  (byte-array (cons (unchecked-byte 0xfe) (number->le-bytes i 4)))
+         0x10000000000000000  (byte-array (cons (unchecked-byte 0xfe) (number->le-bytes i 8)))
+         :else (throw (Exception. "Integer too large" i))))

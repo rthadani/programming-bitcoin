@@ -1,4 +1,5 @@
 (ns programming-bitcoin.elliptic-curve
+  "Chapter 2"
   (:require [clojure.math.numeric-tower :as nt]
             [programming-bitcoin.finite-fields :refer [FieldElementOp + - * / ** zero?]]))
 

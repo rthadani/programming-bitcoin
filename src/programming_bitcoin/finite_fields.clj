@@ -1,4 +1,5 @@
-(ns programming-bitcoin.finite-fields)
+(ns programming-bitcoin.finite-fields
+  "Chapter 1")
 
 (defprotocol FieldElementOp
   (+ [f1 f2])
