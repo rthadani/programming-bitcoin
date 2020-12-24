@@ -1,13 +1,20 @@
 (ns programming-bitcoin.serialization
   (:require [programming-bitcoin.elliptic-curve-crypto :as ecc]
+            [buddy.core.codecs :refer [hex->bytes]]
             [programming-bitcoin.finite-fields :as ff :refer [+ ** -]]
-            [programming-bitcoin.helper :refer [hash-256 number->bytes bytes->number hash-160]]))
+            [programming-bitcoin.helper :refer [hash-256 number->bytes bytes->number hash-160]]
+            [clojure.tools.logging :as log])
+  (:import java.util.Arrays))
 
 ;;utils 
 (defn hexify 
   [b]
   (apply str
     (map #(format "%02x" (byte %)) b)))
+
+(defn unhexify
+  [s]
+  (hex->bytes s))
 
 (defn sub-array
   [b s e]
@@ -30,7 +37,7 @@
        (byte-array (concat [3]
                            (number->bytes (get-in point [:x :num]) 32)))))))
 
-(defn parse
+(defn parse-sec
   [sec-bytes]
   (let [flag (nth sec-bytes 0)]
     (if 
@@ -52,6 +59,20 @@
         sbin (.toByteArray (biginteger s))
         sbin (concat [2 (sbin)] sbin)]
     (byte-array (concat [0x30 (+ (count rbin) (count sbin))] rbin sbin))))
+
+(defn parse-der
+  [der-bytes]
+  {:pre [(= (nth der-bytes 0) 0x30)
+         (= (+ (nth der-bytes 1) 2) (count der-bytes))
+         (= (nth der-bytes 2) 2)]}
+  (let [r-length (int (nth der-bytes 3))
+        r (BigInteger. ^bytes (Arrays/copyOfRange der-bytes 4 (+ 4 r-length)))
+        s-start (+ 4 r-length)
+        s-marker (nth der-bytes s-start)
+        _ (assert (= s-marker 2)  "Bad signature")
+        s-length (nth der-bytes (inc s-start))
+        s (BigInteger. ^bytes (Arrays/copyOfRange der-bytes (+ s-start 2) (+' s-start 2 s-length)))]
+    (ecc/->Signature r s)))
 
 (def BASE58-ALPHABET "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
 (defn encode-base58
@@ -75,7 +96,7 @@
 (defn point->address
   [s256-point & {:keys [compressed? testnet?] :or {compressed? true testnet? false}}]
   (let [h160 (hash-sec s256-point :compressed? compressed?)]
-    (println (seq h160))
+    (log/debug (seq h160))
     (if testnet?
       (encode-base58-checksum (cons (byte 0x6f) h160))
       (encode-base58-checksum (cons (byte 0x00) h160))))) ;;public key is a s256 point which is the address to send to
@@ -88,9 +109,9 @@
     (encode-base58 (byte-array (concat testnet-byte secret-bytes compressed-byte)))))
 
 #_ (hexify (sec ecc/G))
-#_ (parse (sec ecc/G false))
-#_ (parse (sec ecc/G))
-#_ (parse (sec (:point (ecc/->PrivateKey 5001))))
+#_ (parse-sec (sec ecc/G false))
+#_ (parse-sec (sec ecc/G))
+#_ (parse-sec (sec (:point (ecc/->PrivateKey 5001))))
 #_ (point->address (:point (ecc/->PrivateKey (biginteger 5002))) :compressed? false :testnet? true)
 #_  (point->address (:point (ecc/->PrivateKey (biginteger (Math/pow 2020 5)))) :compressed? true :testnet? true)
 #_  (point->address (:point (ecc/->PrivateKey (biginteger 0x12345deadbeef))) :compressed? true :testnet? false)

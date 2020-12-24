@@ -3,7 +3,8 @@
             [programming-bitcoin.elliptic-curve :refer :all]
             [programming-bitcoin.helper :refer :all]
             [programming-bitcoin.finite-fields :refer :all]
-            [programming-bitcoin.elliptic-curve-crypto :refer :all]))
+            [programming-bitcoin.elliptic-curve-crypto :refer :all]
+            [clojure.tools.logging :as log]))
 (let [prime 223
       a     (->FieldElement 0 prime)
       b     (->FieldElement 7 prime)]
@@ -75,7 +76,7 @@
       r (get-in (* k G) [:x :num])
       k-inv (powmod k (- N 2) N)
       s (mod (* (+ z (* e r)) k-inv) N)]
-  (println (pprint-s256-point (* e G)) (hex64 z) (hex64 r) (hex64 s))
+  (log/info (pprint-s256-point (* e G)) (hex64 z) (hex64 r) (hex64 s))
   (fact "Exercise 7 Sign message signature hash match "
         (hex64 z) => "0x969f6056aa26f7d2795fd013fe88868d09c9f6aed96965016e1936ae47060d48")
   (fact "Exercise 7 signature random val"

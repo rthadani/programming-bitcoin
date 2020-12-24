@@ -64,3 +64,13 @@
          0x100000000  (byte-array (cons (unchecked-byte 0xfe) (number->le-bytes i 4)))
          0x10000000000000000  (byte-array (cons (unchecked-byte 0xfe) (number->le-bytes i 8)))
          :else (throw (Exception. "Integer too large" i))))
+
+(defn unsigned-byte 
+  [b]
+  (if (neg? b) (+ 256 b) b))
+
+(defn hexify 
+  [b]
+  (apply str
+    (map #(format "%02x" (byte %)) b)))
+

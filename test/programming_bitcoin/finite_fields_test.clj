@@ -2,8 +2,6 @@
   (:require [midje.sweet :refer :all]
             [programming-bitcoin.finite-fields :refer :all]))
 
-(println "Finite field tests")
-
 (facts "Finite field base tests"
        (fact "Field elements can be created with primes"
              (->FieldElement 7 19) => {:num 7 :prime 19})
@@ -19,7 +17,3 @@
              (-> (->FieldElement 4 31)
                  (** -4)
                  (* (->FieldElement 11 31))) => {:num 13 :prime 31}))
-
-
-
-

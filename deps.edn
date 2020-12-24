@@ -1,9 +1,10 @@
 {:paths   ["src" "resources"]
  :deps    {org.clojure/clojure {:mvn/version "1.10.1"}
            org.clojure/math.numeric-tower {:mvn/version "0.0.4"}
-           buddy/buddy-core {:mvn/version "1.4.0"}}
+           buddy/buddy-core {:mvn/version "1.4.0"}
+           org.clojure/tools.logging {:mvn/version "1.1.0"}}
  :aliases {:test    {:extra-paths ["test"]
-                     :extra-deps  {midje-runner {:git/url "git@github.com:miorimmax/midje-runner"
+                     :extra-deps  {midje-runner {:git/url "https://github.com/miorimmax/midje-runner.git"
                                                  :sha     "ee9c2813e150ae6b3ea41b446b09ba40fc89bdc1"}
                                    midje        {:mvn/version "1.9.8"}}
                      :main-opts   ["-m" "midje-runner.runner"]}
