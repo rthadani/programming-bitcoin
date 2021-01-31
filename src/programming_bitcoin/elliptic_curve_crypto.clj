@@ -63,7 +63,7 @@
            candidate (bytes->number v)]
       (if (and (>= candidate 1) (<= candidate N))
         candidate
-        (let [k (mac/hash (byte-array (concat v [0]) {:key k :alg :hmac+sha256}))
+        (let [k (mac/hash (byte-array (concat v [0])) {:key k :alg :hmac+sha256})
               v (mac/hash v {:key k :alg :hmac+sha256})]
           (recur k v (bytes->number v)))))))
 
