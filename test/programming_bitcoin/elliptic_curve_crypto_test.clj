@@ -77,7 +77,7 @@
       r (get-in (* k G) [:x :num])
       k-inv (powmod k (- N 2) N)
       s (mod (* (+ z (* e r)) k-inv) N)]
-  (log/info (pprint-s256-point (* e G)) (hex64 z) (hex64 r) (hex64 s))
+  (log/debug (pprint-s256-point (* e G)) (hex64 z) (hex64 r) (hex64 s))
   (fact "Exercise 7 Sign message signature hash match "
         (hex64 z) => "0x969f6056aa26f7d2795fd013fe88868d09c9f6aed96965016e1936ae47060d48")
   (fact "Exercise 7 signature random val"
