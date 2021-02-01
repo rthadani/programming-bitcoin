@@ -66,7 +66,7 @@
               (recur cmds))
             (let [cmd (h/unsigned-byte cmd)
                   operation (op/opcode-functions cmd)]
-              (log/info (str "Executing " cmd operation) stack)
+              (log/debug (str "Executing " cmd operation) stack)
               (cond
                 (not operation) false
                 (#{99 100} cmd) (and (operation stack cmds) (recur cmds))

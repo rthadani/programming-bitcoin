@@ -1,4 +1,5 @@
 (ns programming-bitcoin.elliptic-curve-crypto-test
+  (:refer-clojure :exclude [+ - * / zero?])
   (:require [midje.sweet :refer :all]
             [programming-bitcoin.elliptic-curve :refer :all]
             [programming-bitcoin.helper :refer :all]

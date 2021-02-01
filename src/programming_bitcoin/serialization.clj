@@ -1,4 +1,5 @@
 (ns programming-bitcoin.serialization
+  (:refer-clojure :exclude [+ -])
   (:require [programming-bitcoin.elliptic-curve-crypto :as ecc]
             [buddy.core.codecs :refer [hex->bytes]]
             [programming-bitcoin.finite-fields :as ff :refer [+ ** -]]

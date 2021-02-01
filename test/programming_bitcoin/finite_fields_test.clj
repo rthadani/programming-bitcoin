@@ -1,4 +1,5 @@
 (ns programming-bitcoin.finite-fields-test
+  (:refer-clojure :exclude [+ - * / zero?])
   (:require [midje.sweet :refer :all]
             [programming-bitcoin.finite-fields :refer :all]))
 

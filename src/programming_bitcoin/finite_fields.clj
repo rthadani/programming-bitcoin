@@ -1,5 +1,6 @@
 (ns programming-bitcoin.finite-fields
-  "Chapter 1")
+  "Chapter 1"
+   (:refer-clojure :exclude [+ - * / zero?]))
 
 (defprotocol FieldElementOp
   (+ [f1 f2])

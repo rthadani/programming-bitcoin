@@ -1,5 +1,6 @@
 (ns  programming-bitcoin.elliptic-curve-crypto
   "Chapter 3"
+  (:refer-clojure :exclude [+ - * / zero?])
   (:require [clojure.math.numeric-tower :as nt]
             [buddy.core.mac :as mac]
             [programming-bitcoin.finite-fields :as f  :refer [+ - *]]

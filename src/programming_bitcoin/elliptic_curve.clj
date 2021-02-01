@@ -1,5 +1,6 @@
 (ns programming-bitcoin.elliptic-curve
   "Chapter 2"
+  (:refer-clojure :exclude [+ - * / zero?])
   (:require [clojure.math.numeric-tower :as nt]
             [programming-bitcoin.finite-fields :refer [FieldElementOp + - * / ** zero?]]))
 
