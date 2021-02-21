@@ -1,18 +1,15 @@
 (ns programming-bitcoin.serialization
   (:refer-clojure :exclude [+ -])
-  (:require [programming-bitcoin.elliptic-curve-crypto :as ecc]
-            [buddy.core.codecs :refer [hex->bytes]]
+  (:require [buddy.core.codecs :refer [hex->bytes]]
+            [buddy.core.bytes :as bytes]
+            [clojure.tools.logging :as log]
+            [clojure.string :as str]
+            [programming-bitcoin.elliptic-curve-crypto :as ecc]
             [programming-bitcoin.finite-fields :as ff :refer [+ ** -]]
-            [programming-bitcoin.helper :refer [hash-256 number->bytes bytes->number hash-160]]
-            [clojure.tools.logging :as log])
+            [programming-bitcoin.helper :refer [hash-256 number->bytes bytes->number hash-160]])
   (:import java.util.Arrays))
 
 ;;utils 
-(defn hexify 
-  [b]
-  (apply str
-    (map #(format "%02x" (byte %)) b)))
-
 (defn unhexify
   [s]
   (hex->bytes s))
@@ -109,6 +106,20 @@
         compressed-byte (if compressed? [(byte 0x01)] [])]
     (encode-base58 (byte-array (concat testnet-byte secret-bytes compressed-byte)))))
 
+(defn decode-base-58
+  [s]
+  (let [num (loop [num 0
+                   s   (seq  s)]
+              (if (empty? s)
+                num
+                (recur (+' (*' num 58) (str/index-of BASE58-ALPHABET (first s))) (rest s))))
+        combined (number->bytes num 25)
+        checksum (bytes/slice combined  21 25)
+        not-checksum (bytes/slice combined 0 21)]
+    (if (not= (vec checksum) (vec (bytes/slice (hash-256 not-checksum) 0 4)))
+      (throw (ex-info "bad address" {:checksum (vec checksum) :hash256 (vec (bytes/slice (hash-256 not-checksum) 0 4))}))
+      (bytes/slice combined 1 21))))
+
 #_ (hexify (sec ecc/G))
 #_ (parse-sec (sec ecc/G false))
 #_ (parse-sec (sec ecc/G))
@@ -116,3 +127,5 @@
 #_ (point->address (:point (ecc/->PrivateKey (biginteger 5002))) :compressed? false :testnet? true)
 #_  (point->address (:point (ecc/->PrivateKey (biginteger (Math/pow 2020 5)))) :compressed? true :testnet? true)
 #_  (point->address (:point (ecc/->PrivateKey (biginteger 0x12345deadbeef))) :compressed? true :testnet? false)
+#_ (decode-base-58 "mnrVtF8DWjMu839VW3rBfgYaAfKk8983Xf")
+ 

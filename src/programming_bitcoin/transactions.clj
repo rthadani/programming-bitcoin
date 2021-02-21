@@ -106,3 +106,47 @@
   (let [input-sum (apply + (map #(value-tx-in % :testnet? testnet?) tx-ins))
         output-sum (apply + (map :amount tx-outs))]
     (- input-sum output-sum)))
+
+(defn script-pubkey-tx-in [{:keys [prev-index] :as tx-in} testnet?]
+  (let [{:keys [tx-outs]} (fetch-tx-in tx-in testnet?)]
+    (:script-pubkey (nth tx-outs prev-index))))
+
+(def SIGHASH_ALL 1)
+(def SIGHASH_NONE 2)
+(def SIGHASH_SINGLE 3)
+
+(defn sig-hash
+  [{:keys [version tx-ins tx-outs lock-time testnet?] :as tx} input-index]
+  (let [s (concat (h/number->le-bytes version) (h/encode-varint (count tx-ins)))
+        s (byte-array 
+           (concat s
+                   (apply concat (for [i    (range 0 (count tx-ins))
+                                       :let [{:keys [prev-tx prev-index sequence]} (tx-ins i)]]
+                                   (serialize-tx-in
+                                    (->TxIn prev-tx prev-index (when (= i input-index) (script-pubkey-tx-in (tx-ins i) testnet?)) sequence))))
+                   (h/encode-varint (count tx-outs))
+                   (apply concat (for [tx-out tx-outs] (serialize-tx-out tx-out)))
+                   (h/number->le-bytes lock-time 4)
+                   (h/number->le-bytes SIGHASH_ALL 4)))]
+    (h/bytes->number (h/hash-256 s))))
+
+
+(defn verify-tx-input
+  [{:keys [tx-ins testnet?] :as tx} input-index]
+  (let [tx-in (tx-ins input-index)
+        script-pubkey (script-pubkey-tx-in tx-in testnet?)
+        z (sig-hash tx input-index)
+        combined (concat (:script-sig tx-in) script-pubkey)]
+    (script/evaluate combined z)))
+
+(defn verify-tx
+  [{:keys [tx-ins] :as tx}]
+  (and (> (fee tx) 0) 
+       (every? identity (for [i (range 0 (count tx-ins))] (verify-tx-input tx i)))))
+
+(defn to-string
+  [{:keys [version tx-ins tx-outs lock-time]}]
+  {:version version
+   :tx-ins (str/join "," (map #(str (h/hexify (:prev-tx %)) ":" (:prev-index %))  tx-ins))
+   :tx-outs  (str/join "," (map #(str (:amount %) ":" (script/to-string  (:script-pubkey %))) tx-outs))
+   :lock-time lock-time})

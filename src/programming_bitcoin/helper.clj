@@ -73,4 +73,3 @@
   [b]
   (apply str
     (map #(format "%02x" (byte %)) b)))
-

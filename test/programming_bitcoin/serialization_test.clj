@@ -2,6 +2,7 @@
  (:require [midje.sweet :refer :all]
            [programming-bitcoin.serialization :refer :all]
            [programming-bitcoin.elliptic-curve-crypto :refer :all]
+           [programming-bitcoin.helper :refer :all]
            [buddy.core.codecs :refer [hex->bytes]]))
 
 (tabular "Exercise 1"

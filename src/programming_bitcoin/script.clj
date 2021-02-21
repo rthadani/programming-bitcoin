@@ -93,3 +93,6 @@
           (str (str "OP_" (int (h/unsigned-byte cmd))) " " (to-string (rest cmds))))
         (str (h/hexify cmd) " " (to-string (rest cmds)))))))
 
+(defn p2pkh->script
+  [h160]
+  [0x76 0xa9 h160 0x88 0xac])
