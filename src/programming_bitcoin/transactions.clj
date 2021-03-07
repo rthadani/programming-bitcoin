@@ -2,6 +2,8 @@
   "Chapters 5 6 7"
   (:require [programming-bitcoin.helper :as h]
             [programming-bitcoin.script :as script]
+            [programming-bitcoin.elliptic-curve-crypto :as ecc]
+            [programming-bitcoin.serialization :as ser] 
             [buddy.core.bytes :as bytes]
             [buddy.core.codecs :as codecs]
             [clojure.java.io :as io]
@@ -108,7 +110,7 @@
     (- input-sum output-sum)))
 
 (defn script-pubkey-tx-in [{:keys [prev-index] :as tx-in} testnet?]
-  (let [{:keys [tx-outs]} (fetch-tx-in tx-in testnet?)]
+  (let [{:keys [tx-outs]} (fetch-tx-in tx-in :testnet? testnet?)]
     (:script-pubkey (nth tx-outs prev-index))))
 
 (def SIGHASH_ALL 1)
@@ -117,7 +119,7 @@
 
 (defn sig-hash
   [{:keys [version tx-ins tx-outs lock-time testnet?] :as tx} input-index]
-  (let [s (concat (h/number->le-bytes version) (h/encode-varint (count tx-ins)))
+  (let [s (concat (h/number->le-bytes version 4) (h/encode-varint (count tx-ins)))
         s (byte-array 
            (concat s
                    (apply concat (for [i    (range 0 (count tx-ins))
@@ -130,7 +132,6 @@
                    (h/number->le-bytes SIGHASH_ALL 4)))]
     (h/bytes->number (h/hash-256 s))))
 
-
 (defn verify-tx-input
   [{:keys [tx-ins testnet?] :as tx} input-index]
   (let [tx-in (tx-ins input-index)
@@ -139,12 +140,22 @@
         combined (concat (:script-sig tx-in) script-pubkey)]
     (script/evaluate combined z)))
 
+(defn sign-input
+  [tx input-index private-key]
+  (let [z (sig-hash tx input-index)
+       der (ser/der (ecc/sign private-key z))
+       sig (bytes/concat der (h/number->bytes SIGHASH_ALL 1))
+       sec (ser/sec (:point private-key))
+       new-tx (assoc-in tx [:tx-ins input-index :script-sig] [sig sec])]
+    (when (verify-tx-input new-tx input-index)
+      new-tx)))
+
 (defn verify-tx
   [{:keys [tx-ins] :as tx}]
   (and (> (fee tx) 0) 
        (every? identity (for [i (range 0 (count tx-ins))] (verify-tx-input tx i)))))
 
-(defn to-string
+(defn ->clj
   [{:keys [version tx-ins tx-outs lock-time]}]
   {:version version
    :tx-ins (str/join "," (map #(str (h/hexify (:prev-tx %)) ":" (:prev-index %))  tx-ins))

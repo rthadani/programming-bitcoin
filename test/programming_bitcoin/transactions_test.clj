@@ -49,7 +49,7 @@ df2b3eda8db57397088ac46430600" #"\n" "")
             signature (parse-der der)]
         (verify-signature point z signature) => TRUTHY))
 
-(fact "Chapter 7 - Make transaction"
+(fact "Chapter 7 - Make and sign transaction"
       (let [prev-tx (c/hex->bytes "0d6fe5213c0b3291f208cba8bfb59b7476dffacc4e5cb66f6eb20a080843a299")
             prev-index 13
             tx-in (tx/->TxIn prev-tx prev-index)
@@ -61,8 +61,9 @@ df2b3eda8db57397088ac46430600" #"\n" "")
             target-h160 (decode-base-58 "mnrVtF8DWjMu839VW3rBfgYaAfKk8983Xf")
             target-script (script/p2pkh->script target-h160)
             target-output (tx/->TxOut target-amount target-script)
-            tx-obj (tx/->Tx 1 [tx-in] [change-output target-output] 0 true)]
-            (tx/to-string tx-obj) => {:version 1 
+            tx-obj (tx/->Tx 1 [tx-in] [change-output target-output] 0 true)
+            ]
+            (tx/->clj tx-obj) => {:version 1 
                                       :tx-ins "0d6fe5213c0b3291f208cba8bfb59b7476dffacc4e5cb66f6eb20a080843a299:13"
                                       :tx-outs "33000000:OP_DUP OP_HASH160 d52ad7ca9b3d096a38e752c2018e6fbc40cdf26f OP_EQUALVERIFY OP_CHECKSIG ,1.0E7:OP_DUP OP_HASH160 507b27411ccf7f16f10297de6cef3f291623eddf OP_EQUALVERIFY OP_CHECKSIG " 
                                       :lock-time 0}))

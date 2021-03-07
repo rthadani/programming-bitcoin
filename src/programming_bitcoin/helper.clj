@@ -58,12 +58,12 @@
 
 (defn encode-varint
   [i]
-  (condp #(< i %)
+  (condp #(< %2 %) i 
          0xfd (byte-array [(unchecked-byte i)])
          0x10000 (byte-array (cons (unchecked-byte 0xfd) (number->le-bytes i 2)))
          0x100000000  (byte-array (cons (unchecked-byte 0xfe) (number->le-bytes i 4)))
          0x10000000000000000  (byte-array (cons (unchecked-byte 0xfe) (number->le-bytes i 8)))
-         :else (throw (Exception. "Integer too large" i))))
+         (throw (ex-info "Integer too large" {:varint i}))))
 
 (defn unsigned-byte 
   [b]
