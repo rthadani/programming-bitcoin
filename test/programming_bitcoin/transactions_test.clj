@@ -62,8 +62,14 @@ df2b3eda8db57397088ac46430600" #"\n" "")
             target-script (script/p2pkh->script target-h160)
             target-output (tx/->TxOut target-amount target-script)
             tx-obj (tx/->Tx 1 [tx-in] [change-output target-output] 0 true)
-            ]
+            private-key (->PrivateKey 8675309)
+            tx-signed (tx/sign-input tx-obj 0 private-key)
+            serialized (tx/serialize-tx tx-signed) ]
             (tx/->clj tx-obj) => {:version 1 
                                       :tx-ins "0d6fe5213c0b3291f208cba8bfb59b7476dffacc4e5cb66f6eb20a080843a299:13"
                                       :tx-outs "33000000:OP_DUP OP_HASH160 d52ad7ca9b3d096a38e752c2018e6fbc40cdf26f OP_EQUALVERIFY OP_CHECKSIG ,1.0E7:OP_DUP OP_HASH160 507b27411ccf7f16f10297de6cef3f291623eddf OP_EQUALVERIFY OP_CHECKSIG " 
-                                      :lock-time 0}))
+                                      :lock-time 0}
+            (tx/->clj tx-obj) => (tx/->clj tx-signed)
+            (tx/verify-tx tx-signed) => TRUTHY
+            (tx/verify-tx tx-obj) => FALSEY
+            (nil? serialized) => FALSEY))

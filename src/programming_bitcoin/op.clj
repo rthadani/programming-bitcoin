@@ -90,7 +90,7 @@
 
 (defn op-checksig
   [^Stack stack z]
-  {:pre [(> (.size stack) 2)]}
+  {:pre [(>= (.size stack) 2)]}
   (let [sec-bytes (.pop stack)
         der-bytes (.pop stack)
         der-bytes (bytes/slice der-bytes 0 (dec (count der-bytes)))

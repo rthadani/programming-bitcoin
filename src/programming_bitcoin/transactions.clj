@@ -57,10 +57,10 @@
 
 (defn serialize-tx-in
   [{:keys [prev-tx prev-index script-sig sequence]}]
-  (bytes/concat (reverse prev-tx)
-                (h/number->le-bytes prev-index 4)
-                (script/serialize script-sig)
-                (h/number->le-bytes sequence 4)))
+  (byte-array (concat (reverse prev-tx)
+                      (h/number->bytes prev-index 4)
+                      (script/serialize script-sig)
+                      (h/number->le-bytes sequence 4))))
 
 (defn fetch-tx-in 
   [{:keys [prev-tx]} & {:keys [testnet?] :or {testnet? false}}]
@@ -99,9 +99,9 @@
   (byte-array (concat 
                (h/number->le-bytes version 4)
                (h/encode-varint (count tx-ins))
-               (vec (for [tx-in tx-ins] (serialize-tx-in tx-in)))
+               (apply concat (for [tx-in tx-ins] (serialize-tx-in tx-in)))
                (h/encode-varint (count tx-outs))
-               (vec (for [tx-out tx-outs] (serialize-tx-out tx-out)))
+               (apply concat (for [tx-out tx-outs] (serialize-tx-out tx-out)))
                (h/number->le-bytes lock-time 4))))
 
 (defn fee [{:keys [tx-ins tx-outs testnet?]}]
@@ -120,7 +120,7 @@
 (defn sig-hash
   [{:keys [version tx-ins tx-outs lock-time testnet?] :as tx} input-index]
   (let [s (concat (h/number->le-bytes version 4) (h/encode-varint (count tx-ins)))
-        s (byte-array 
+        s (byte-array
            (concat s
                    (apply concat (for [i    (range 0 (count tx-ins))
                                        :let [{:keys [prev-tx prev-index sequence]} (tx-ins i)]]

@@ -55,7 +55,7 @@
   (let [rbin (.toByteArray (biginteger r))
         rbin (concat [2 (count rbin)] rbin)
         sbin (.toByteArray (biginteger s))
-        sbin (concat [2 (sbin)] sbin)]
+        sbin (concat [2 (count sbin)] sbin)]
     (byte-array (concat [0x30 (+ (count rbin) (count sbin))] rbin sbin))))
 
 (defn parse-der

@@ -31,17 +31,18 @@
 (defn raw-serialize
   [cmds]
   (loop [result []
-         cmds cmds]
+         cmds (seq cmds)]
     (if (empty? cmds) 
       (byte-array result)
       (let [cmd (first cmds)]
         (if (number? cmd)
-          (recur (conj result (h/number->le-bytes cmd 1)) (rest cmds))
-          (let [length (count cmd)]
+          (recur (concat result (h/number->le-bytes cmd 1)) (rest cmds))
+          (let [length (count cmd)
+                cmds (rest cmds)]
             (cond
-              (< length 75) (recur (conj result (h/number->le-bytes length 1) cmd) (rest cmds))
-              (and (> length 75) (< length 0x100)) (recur (conj result (h/number->le-bytes 76 1) (h/number->bytes length 1) cmd) (rest cmds))
-              (and (> length 0x100) (<= length 520)) (recur (conj result (h/number->le-bytes 77 1) (h/number->le-bytes length 2) cmd) (rest cmds))
+              (< length 75) (recur (concat result (h/number->le-bytes length 1) cmd) cmds)
+              (and (> length 75) (< length 0x100)) (recur (concat result (h/number->le-bytes 76 1) (h/number->le-bytes length 1) cmd) cmds)
+              (and (> length 0x100) (<= length 520)) (recur (concat result (h/number->le-bytes 77 1) (h/number->le-bytes length 2) cmd) cmds)
               :else (throw (ex-info "Too long a cmd" {:cmd    cmd
                                                       :length length})))))))))
 
@@ -54,28 +55,29 @@
 (defn evaluate
    [script z]
   (let [stack (Stack.)
-        alt-stack (Stack.)]
-    (loop [cmds (seq script)]
-      (if (empty? cmds) 
-        (and (not (.empty stack)) (not= (.peek stack) (byte-array [])))
-        (let [cmd (first cmds)
-              cmds (rest cmds)]
-          (if (not (number? cmd))
-            (do 
-              (.push stack (h/unsigned-byte cmd))
-              (recur cmds))
-            (let [cmd (h/unsigned-byte cmd)
-                  operation (op/opcode-functions cmd)]
-              (log/debug (str "Executing " cmd operation) stack)
-              (cond
-                (not operation) false
-                (#{99 100} cmd) (and (operation stack cmds) (recur cmds))
-                (#{107 108} cmd) (and (operation stack alt-stack) (recur cmds))
-                (#{172 173 174 175} cmd) (and (operation stack z) (recur cmds))
-                :else (and (operation stack) (recur cmds))))))))
-    (cond 
+        alt-stack (Stack.)
+        result (loop [cmds (seq script)]
+                 (if (empty? cmds)
+                   (and (not (.empty stack)) (not= (.peek stack) (byte-array [])))
+                   (let [cmd (first cmds)
+                         cmds (rest cmds)]
+                     (if (not (number? cmd))
+                       (do
+                         (.push stack cmd)
+                         (recur cmds))
+                       (let [cmd (h/unsigned-byte cmd)
+                             operation (op/opcode-functions cmd)]
+                         (log/debug (str "Executing " cmd operation) stack (.size stack))
+                         (cond
+                           (not operation) false
+                           (#{99 100} cmd) (and (operation stack cmds) (recur cmds))
+                           (#{107 108} cmd) (and (operation stack alt-stack) (recur cmds))
+                           (#{172 173 174 175} cmd) (and (operation stack z) (recur cmds))
+                           :else (and (operation stack) (recur cmds))))))))]
+    (cond
+      (not result) false
       (zero? (.size stack)) false
-      (empty? (.peek stack)) false
+      (empty? (.pop stack)) false
       :else true)))
 
 (defn combine-script
