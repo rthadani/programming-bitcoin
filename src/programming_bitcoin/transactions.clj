@@ -118,14 +118,17 @@
 (def SIGHASH_SINGLE 3)
 
 (defn sig-hash
-  [{:keys [version tx-ins tx-outs lock-time testnet?] :as tx} input-index]
+  [{:keys [version tx-ins tx-outs lock-time testnet?] :as tx} input-index redeem-script]
   (let [s (concat (h/number->le-bytes version 4) (h/encode-varint (count tx-ins)))
         s (byte-array
            (concat s
                    (apply concat (for [i    (range 0 (count tx-ins))
                                        :let [{:keys [prev-tx prev-index sequence]} (tx-ins i)]]
                                    (serialize-tx-in
-                                    (->TxIn prev-tx prev-index (when (= i input-index) (script-pubkey-tx-in (tx-ins i) testnet?)) sequence))))
+                                    (->TxIn prev-tx prev-index (when (= i input-index)
+                                                                 (if redeem-script
+                                                                   redeem-script
+                                                                   (script-pubkey-tx-in (tx-ins i) testnet?))) sequence))))
                    (h/encode-varint (count tx-outs))
                    (apply concat (for [tx-out tx-outs] (serialize-tx-out tx-out)))
                    (h/number->le-bytes lock-time 4)
@@ -136,13 +139,17 @@
   [{:keys [tx-ins testnet?] :as tx} input-index]
   (let [tx-in (tx-ins input-index)
         script-pubkey (script-pubkey-tx-in tx-in testnet?)
-        z (sig-hash tx input-index)
+        redeem-script (when (script/p2sh-script? script-pubkey)
+                        (as-> (last (:script-sig tx-in)) $
+                          (bytes/concat (h/encode-varint (count $)) $)
+                          (script/parse (io/input-stream $))))
+        z (sig-hash tx input-index redeem-script)
         combined (concat (:script-sig tx-in) script-pubkey)]
     (script/evaluate combined z)))
 
 (defn sign-input
   [tx input-index private-key]
-  (let [z (sig-hash tx input-index)
+  (let [z (sig-hash tx input-index nil)
        der (ser/der (ecc/sign private-key z))
        sig (bytes/concat der (h/number->bytes SIGHASH_ALL 1))
        sec (ser/sec (:point private-key))
@@ -161,3 +168,47 @@
    :tx-ins (str/join "," (map #(str (h/hexify (:prev-tx %)) ":" (:prev-index %))  tx-ins))
    :tx-outs  (str/join "," (map #(str (:amount %) ":" (script/to-string  (:script-pubkey %))) tx-outs))
    :lock-time lock-time})
+
+(defn coinbase-tx?
+  [{:keys [tx-ins]}]
+  (and (= (count tx-ins) 1)
+       (bytes/equals? (:prev-tx (first tx-ins)) (byte-array (repeat 32 (byte 0))))
+       (= (:prev-index (first tx-ins)) 0xffffffff)))
+
+#_ (let [hex-tx  (clojure.string/replace "0100000001868278ed6ddfb6c1ed3ad5f8181eb0c7a385aa0836f01d5e4789e6
+bd304d87221a000000db00483045022100dc92655fe37036f47756db8102e0d7d5e28b3beb83a8
+fef4f5dc0559bddfb94e02205a36d4e4e6c7fcd16658c50783e00c341609977aed3ad00937bf4e
+e942a8993701483045022100da6bee3c93766232079a01639d07fa869598749729ae323eab8eef
+53577d611b02207bef15429dcadce2121ea07f233115c6f09034c0be68db99980b9a6c5e754022
+01475221022626e955ea6ea6d98850c994f9107b036b1334f18ca8830bfff1295d21cfdb702103
+b287eaf122eea69030a0e9feed096bed8045c8b98bec453e1ffac7fbdbd4bb7152aeffffffff04
+d3b11400000000001976a914904a49878c0adfc3aa05de7afad2cc15f483a56a88ac7f40090000
+0000001976a914418327e3f3dda4cf5b9089325a4b95abdfa0334088ac722c0c00000000001976
+a914ba35042cfe9fc66fd35ac2224eebdafd1028ad2788acdc4ace020000000017a91474d691da
+1574e6b3c192ecfb52cc8984ee7b6c568700000000" #"\n" "")
+         hex-sec "03b287eaf122eea69030a0e9feed096bed8045c8b98bec453e1ffac7fbdbd4bb71"
+         hex-der (clojure.string/replace "3045022100da6bee3c93766232079a01639d07fa869598749729ae323eab8ee
+f53577d611b02207bef15429dcadce2121ea07f233115c6f09034c0be68db99980b9a6c5e754022" #"\n" "")
+         hex-redeem-script (clojure.string/replace "475221022626e955ea6ea6d98850c994f9107b036b1334f18ca88
+30bfff1295d21cfdb702103b287eaf122eea69030a0e9feed096bed8045c8b98bec453e1ffac7f
+bdbd4bb7152ae" #"\n" "")
+         sec (codecs/hex->bytes hex-sec)
+         der (codecs/hex->bytes hex-der)
+         redeem-script (script/parse (clojure.java.io/input-stream (codecs/hex->bytes hex-redeem-script)))
+         stream (clojure.java.io/input-stream (codecs/hex->bytes hex-tx))
+         tx-obj (parse-tx  stream) 
+         i ((:tx-ins tx-obj) 0)
+         _ (println i)
+         s (bytes/concat (h/number->le-bytes (:version tx-obj) 4)
+                         (h/encode-varint (count (:tx-ins tx-obj)))
+                         (serialize-tx-in (->TxIn (:prev-tx i) (:prev-index i) redeem-script (:sequence i)))
+                         (h/encode-varint (count (:tx-outs tx-obj)))
+                         (apply bytes/concat (for [tx-out (:tx-outs tx-obj)] (serialize-tx-out tx-out)))
+                         (h/number->le-bytes (:lock-time tx-obj) 4)
+                         (h/number->le-bytes SIGHASH_ALL 4))
+         z (h/bytes->number (h/hash-256 s)) 
+         _ (println z)
+         point (ser/parse-sec sec)
+         sig (ser/parse-der der)]
+         (println (->clj tx-obj))
+         (ecc/verify-signature point z sig))

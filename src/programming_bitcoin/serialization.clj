@@ -120,6 +120,14 @@
       (throw (ex-info "bad address" {:checksum (vec checksum) :hash256 (vec (bytes/slice (hash-256 not-checksum) 0 4))}))
       (bytes/slice combined 1 21))))
 
+(defn h160->p2pkh-address 
+  [h160 testnet?]
+  (encode-base58-checksum
+   (byte-array (cons (if testnet? (byte 0x6f) (byte 0x00)) h160))))
+
+(defn h160->p2sh-address [h160 testnet?]
+  (encode-base58-checksum
+   (byte-array (cons (if testnet? (unchecked-byte 0xc4) (byte 0x05)) h160))))
 #_ (hexify (sec ecc/G))
 #_ (parse-sec (sec ecc/G false))
 #_ (parse-sec (sec ecc/G))

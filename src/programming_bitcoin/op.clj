@@ -151,6 +151,28 @@
         (.push stack (encode-num (* t1 t2)))
         true)))
 
+(defn op-checkmultisig
+  [^Stack stack z]
+  (if (< (.size stack) 1)
+    false
+    (let [n              (decode-num (.pop stack))
+          sec-pubkeys    (when (>= (.size stack) (inc n)) (vec (for [_ (range 0 n)] (.pop stack))))
+          m              (and (some? sec-pubkeys) (decode-num (.pop stack)))
+          der-signatures (when (and m (>= (.size stack) (inc m))) (vec (for [_    (range 0 m)
+                                                                             :let [top (.peek stack)]]
+                                                                         (bytes/slice (.pop stack) 0 (dec (count top))))))]
+      (if (or (not sec-pubkeys) (not der-signatures) (zero? (count der-signatures)))
+        (op-0 stack)
+        (try
+          (loop [points (map ser/parse-sec sec-pubkeys)
+                 sigs   (map ser/parse-der der-signatures)]
+            (cond
+              (empty? sigs) (op-1 stack)
+              (empty? points) (op-0 stack)
+              (ecc/verify-signature (first points) z (first sigs))  (recur (rest points) (rest sigs))
+              :else (recur (rest points) sigs)))
+          (catch Exception e (log/error (.getMessage e)) (op-0 stack)))))))
+
 (defn encode-num
   [num]
   (if (zero? num)
@@ -209,6 +231,7 @@
    149 op-mul
    170 op-hash256
    172 op-checksig
+   174 op-checkmultisig
    169 op-hash160})
 
 (def opcode-strings
@@ -238,4 +261,5 @@
    149 "OP_MUL"
    170 "OP_HASH256"
    172 "OP_CHECKSIG"
+   174 "OP_CHECKMLTISIG"
    169 "OP_HASH160"})

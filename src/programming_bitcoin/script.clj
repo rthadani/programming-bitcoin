@@ -2,7 +2,8 @@
   (:require [programming-bitcoin.helper :as h]
             [programming-bitcoin.op :as op]
             [buddy.core.bytes :as bytes]
-            [clojure.tools.logging :as log])
+            [clojure.tools.logging :as log]
+            [clojure.java.io :as io])
   (:import java.io.InputStream
            java.util.Stack))
 
@@ -52,6 +53,30 @@
         total (h/encode-varint (count result))]
     (bytes/concat total result))) 
 
+(defn p2sh-script? [[cmd0 cmd1 cmd2 :as cmds]]
+  (and (= (count cmds) 3)
+       (= cmd0 0xa9) (bytes? cmd1) (= (count cmd1) 20) (= cmd2 0x87)))
+
+(defn evaluate-p2sh
+  [[cmd0 cmd1 cmd2 :as cmds] cmd ^Stack stack]
+  (if (p2sh-script? cmds)
+    #_(and (= (count cmds) 3)
+           (= cmd0 0xa9)
+           (bytes? cmd1)
+           (= cmd2 0x87))
+    (if (not (op/op-hash160 stack)) 
+      false
+      (do 
+        (.push stack cmd1)
+        (cond
+          (not (op/op-equal stack)) false
+          (not (op/op-verify stack)) (do (log/info "bad p2sh h160") false)
+          :else (let [redeem-script (bytes/concat  (h/encode-varint (count cmd)) cmd)
+                      stream (io/input-stream redeem-script)]
+                  (parse stream)))))
+    cmds))
+
+
 (defn evaluate
    [script z]
   (let [stack (Stack.)
@@ -64,7 +89,8 @@
                      (if (not (number? cmd))
                        (do
                          (.push stack cmd)
-                         (recur cmds))
+                         (let [cmds (evaluate-p2sh cmds cmd stack)]
+                           (recur cmds)))
                        (let [cmd (h/unsigned-byte cmd)
                              operation (op/opcode-functions cmd)]
                          (log/debug (str "Executing " cmd operation) stack (.size stack))
