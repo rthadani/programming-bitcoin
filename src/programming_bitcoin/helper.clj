@@ -1,6 +1,8 @@
 (ns programming-bitcoin.helper
   (:require [buddy.core.hash :as hash]
-            [clojure.java.io :as io])
+            [buddy.core.bytes :as bytes]
+            [clojure.java.io :as io]
+            [clojure.math.numeric-tower :as n])
   (:import java.io.InputStream))
 
 (defn hash-256
@@ -73,3 +75,29 @@
   [b]
   (apply str
     (map #(format "%02x" (byte %)) b)))
+
+
+(defn bits->target
+  [^bytes bits]
+  (let [exponent (nth bits 3)
+        coefficient (le-bytes->number (bytes/slice bits 0 3))]
+    (*' coefficient (n/expt 256 ( - exponent 3)))))
+
+(defn target->bits  
+  [target]
+  (cond
+    (let [bytes (into [] (drop-while #{0}) (seq (number->bytes 32 target)))
+          [exponent coefficient] (if (> (unsigned-byte (nth bytes 0)) 0x7f)
+                                   [(inc (count bytes)) (cons 0 (subvec bytes 0 2))]
+                                   [(count bytes) (subvec bytes 0 3)])]
+      (byte-array (concat (reverse coefficient) [(unchecked-byte exponent)])))))
+    
+(def TWO_WEEKS (* 60 60 24 14))
+(def MAX_TARGET 0x00000000FFFF0000000000000000000000000000000000000000000000000000)
+(defn calculate-new-bits [prev-bits time-differential]
+  (let [time-differential (cond (> time-differential (* 4 TWO_WEEKS)) (* 4 TWO_WEEKS)
+                                (< time-differential (/ TWO_WEEKS 4)) (/ TWO_WEEKS 4)
+                                :else time-differential)
+        prev-target (bits->target prev-bits)
+        new-target (min MAX_TARGET (/ (* prev-target time-differential) TWO_WEEKS))]
+    (target->bits new-target)))
