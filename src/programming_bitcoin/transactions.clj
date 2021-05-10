@@ -175,6 +175,12 @@
        (bytes/equals? (:prev-tx (first tx-ins)) (byte-array (repeat 32 (byte 0))))
        (= (:prev-index (first tx-ins)) 0xffffffff)))
 
+(defn coinbase-height
+  [{:keys [tx-ins] :as tx}]
+  (when (coinbase-tx? tx)
+    (h/le-bytes->number (nth (:script-sig (tx-ins 0)) 0))))
+    
+
 #_ (let [hex-tx  (clojure.string/replace "0100000001868278ed6ddfb6c1ed3ad5f8181eb0c7a385aa0836f01d5e4789e6
 bd304d87221a000000db00483045022100dc92655fe37036f47756db8102e0d7d5e28b3beb83a8
 fef4f5dc0559bddfb94e02205a36d4e4e6c7fcd16658c50783e00c341609977aed3ad00937bf4e
