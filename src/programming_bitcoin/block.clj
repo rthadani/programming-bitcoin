@@ -3,7 +3,7 @@
             [clojure.math.numeric-tower :as n])
   (:import java.io.InputStream))
 
-(defrecord Block [version previous-block merkele-root timestamp bits nonce])
+(defrecord Block [version previous-block merkle-root timestamp bits nonce])
 
 (defn parse 
   [^InputStream stream]
@@ -16,12 +16,13 @@
     (->Block version prev-block merkle-root timestamp bits nonce)))
 
 (defn serialize 
-  [{:keys [version prev-block merkle-root timestamp bits nonce]}]
-  (byte-array (concat (h/number->le-bytes 4 version) 
-                      (reverse prev-block)
+  [{:keys [version previous-block merkle-root timestamp bits nonce]}]
+  (byte-array (concat (h/number->le-bytes version 4) 
+                      (reverse previous-block)
                       (reverse merkle-root) 
-                      (h/number->le-bytes 4 timestamp)
-                      bits nonce)))
+                      (h/number->le-bytes timestamp 4)
+                      bits 
+                      nonce)))
 
 (defn hash
   [block]

@@ -81,16 +81,15 @@
   [^bytes bits]
   (let [exponent (nth bits 3)
         coefficient (le-bytes->number (bytes/slice bits 0 3))]
-    (*' coefficient (n/expt 256 ( - exponent 3)))))
+    (*' coefficient (n/expt 256 (- exponent 3)))))
 
-(defn target->bits  
+(defn target->bits
   [target]
-  (cond
-    (let [bytes (into [] (drop-while #{0}) (seq (number->bytes 32 target)))
-          [exponent coefficient] (if (> (unsigned-byte (nth bytes 0)) 0x7f)
-                                   [(inc (count bytes)) (cons 0 (subvec bytes 0 2))]
-                                   [(count bytes) (subvec bytes 0 3)])]
-      (byte-array (concat (reverse coefficient) [(unchecked-byte exponent)])))))
+  (let [bytes (into [] (drop-while #{0}) (seq (number->bytes target 32)))
+        [exponent coefficient] (if (> (unsigned-byte (nth bytes 0)) 0x7f)
+                                 [(inc (count bytes)) (cons 0 (subvec bytes 0 2))]
+                                 [(count bytes) (subvec bytes 0 3)])]
+    (byte-array (concat (reverse coefficient) [(unchecked-byte exponent)]))))
     
 (def TWO_WEEKS (* 60 60 24 14))
 (def MAX_TARGET 0x00000000FFFF0000000000000000000000000000000000000000000000000000)
