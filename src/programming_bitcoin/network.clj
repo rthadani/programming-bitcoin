@@ -1,5 +1,6 @@
 (ns programming-bitcoin.network
   (:require [programming-bitcoin.helper :as h]
+            [programming-bitcoin.block :as block]
             [buddy.core.bytes :as bytes]
             [buddy.core.nonce :as nonce]
             [buddy.core.codecs :refer [hex->bytes]]
@@ -107,6 +108,31 @@
 (defmethod serialize-message "verack" [_] (byte-array []))
 (defmethod parse-message "verack" [_ _] (VerackMessage. "verack"))
 (defrecord GetHeadersMessage [command-name version num-hashes start-block end-block])
+(defn get-headers-message-with-defaults [m]
+  (let [{:keys [version num-hashes start-block end-block]} (merge {:version 70015 
+                                                                   :num-hashes 1 
+                                                                   :end-block (byte-array (repeat 32 0))} 
+                                                                  m)]
+    (assert start-block "A start block is required")
+    (GetHeadersMessage. "getheaders" version num-hashes start-block end-block)))
+
+(defmethod serialize-message "getheaders" 
+  [{:keys [version num-hashes start-block end-block]}]
+  (byte-array (concat (h/number->le-bytes version 4)
+                      (h/encode-varint num-hashes)
+                      (reverse start-block)
+                      (reverse end-block))))
+
+(defrecord Headers [command-name blocks])
+(defmethod parse-message "headers" [_ ^InputStream payload]
+  (let [num-headers (h/read-varint payload) ]
+    (->> (for [_ (range num-headers)
+               :let [b (block/parse payload)
+                     num-txs (h/read-varint payload)]
+               _ (assert (zero? num-txs) "number of transactions not zero")]
+           b)
+         
+         (Headers. "headers"))))
 
 ;;The node sever cod
 (defn simple-node
