@@ -36,13 +36,13 @@ df2b3eda8db57397088ac46430600" #"\n" "")
             (:script-pubkey)
             (script/to-string)) => "OP_DUP OP_HASH160 ab0c0b2e98b1ab6dbf67d4750b0a56244948a879 OP_EQUALVERIFY OP_CHECKSIG "))
 
-(fact "Chapter 7 - Am i creating money"
+   (fact "Chapter 7 - Am i creating money"
       (let [raw-tx (c/hex->bytes "0100000001813f79011acb80925dfe69b3def355fe914bd1d96a3f5f71bf8303c6a989c7d1000000006b483045022100ed81ff192e75a3fd2304004dcadb746fa5e24c5031ccfcf21320b0277457c98f02207a986d955c6e0cb35d446a89d3f56100f4d7f67801c31967743a9c8e10615bed01210349fc4e631e3624a545de3f89f5d8684c7b8138bd94bdd531d2e213bf016b278afeffffff02a135ef01000000001976a914bc3b654dca7e56b04dca18f2566cdaf02e8d9ada88ac99c39800000000001976a9141c4bc762dd5423e332166702cb75f40df79fea1288ac19430600")
             stream (clojure.java.io/input-stream raw-tx)
             transaction (tx/parse-tx stream)]
-        (>= (tx/fee transaction) 0) => truthy))
+        (>= (tx/fee transaction) 0) => TRUTHY))
 
-(fact "Chapter 7 - verify signature"
+   (fact "Chapter 7 - verify signature"
       (let [sec (c/hex->bytes "0349fc4e631e3624a545de3f89f5d8684c7b8138bd94bdd531d2e213bf016b278a")
             der  (c/hex->bytes "3045022100ed81ff192e75a3fd2304004dcadb746fa5e24c5031ccfcf21320b0277457c98f02207a986d955c6e0cb35d446a89d3f56100f4d7f67801c31967743a9c8e10615bed")
             z  0x27e0c5994dec7824e56dec6b2fcb342eb7cdb0d0957c2fce9882f715e85d81a6
@@ -50,7 +50,7 @@ df2b3eda8db57397088ac46430600" #"\n" "")
             signature (parse-der der)]
         (verify-signature point z signature) => TRUTHY))
 
-(fact "Chapter 7 - Make and sign transaction"
+   (fact "Chapter 7 - Make and sign transaction"
       (let [prev-tx (c/hex->bytes "0d6fe5213c0b3291f208cba8bfb59b7476dffacc4e5cb66f6eb20a080843a299")
             prev-index 13
             tx-in (tx/->TxIn prev-tx prev-index)
@@ -101,4 +101,4 @@ bdbd4bb7152ae" #"\n" "")
             z (tx/sig-hash tx-obj 0 redeem-script)
             point (parse-sec sec)
             sig (parse-der der)]
-            (verify-signature point z sig) => FALSEY)) ;TODO fix this
+            (verify-signature point z sig) => TRUTHY))

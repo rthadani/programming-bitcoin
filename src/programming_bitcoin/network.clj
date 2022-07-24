@@ -3,11 +3,12 @@
             [programming-bitcoin.block :as block]
             [buddy.core.bytes :as bytes]
             [buddy.core.nonce :as nonce]
-            [buddy.core.codecs :refer [hex->bytes]]
+            [buddy.core.codecs :refer [hex->bytes bytes->hex]]
             [aleph.tcp :as tcp]
             [byte-streams]
             [manifold.stream :as s]
-            [clojure.tools.logging :as log])
+            [clojure.tools.logging :as log]
+            [clojure.java.io :as io])
   (:import java.io.InputStream))
 
 (def NETWORK_MAGIC (byte-array (map unchecked-byte [0xf9 0xbe 0xb4 0xd9])))
@@ -52,8 +53,9 @@
   [{:keys [magic command payload]}]
   (byte-array (concat
                magic
-               command (repeat (- 12 (count command)) 0)
-               (h/number->bytes (count payload) 4)
+               command 
+               (repeat (- 12 (count command)) 0)
+               (h/number->le-bytes (count payload) 4)
                (bytes/slice (h/hash-256 payload) 0 4)
                payload)))
 
@@ -102,11 +104,15 @@
            (h/number->le-bytes latest-block 4)
            (if relay? [1] [0]))))
 
-(defmethod parse-message "version" [_ payload])
+(defmethod parse-message "version" [_ payload]
+  {:command-name "version"
+   :payload      payload})
+
 
 (defrecord VerackMessage [command-name])
 (defmethod serialize-message "verack" [_] (byte-array []))
 (defmethod parse-message "verack" [_ _] (VerackMessage. "verack"))
+
 (defrecord GetHeadersMessage [command-name version num-hashes start-block end-block])
 (defn get-headers-message-with-defaults [m]
   (let [{:keys [version num-hashes start-block end-block]} (merge {:version 70015 
@@ -146,9 +152,6 @@
         stream   @(tcp/client endpoint)]
     (assoc endpoint :duplex-stream stream :input-stream (byte-streams/to-input-stream stream) :logging? logging?)))
 
-(defmethod parse-message "version" [_ payload]
-  {:command-name "version"
-   :payload      payload})
 (defn send-message
   [{:keys [duplex-stream testnet? logging?]} message]
   (let [envelope (->NetworkEnvelope (:command-name message)
@@ -156,23 +159,22 @@
                                     testnet?)]
     (when logging?
       (log/info "Sending envelope" (envelope->edn envelope)))
-    
     @(s/put! duplex-stream (serialize-envelope envelope))))
 
 (defn receive-message
-  [{:keys [input-stream logging?]}]
-  (let [envelope (parse-envelope input-stream)]
+  [{:keys [input-stream logging? testnet?]}]
+  (let [{:keys [command payload] :as envelope} (parse-envelope input-stream)]
     (when logging? 
       (log/info "Receiving envelope " (envelope->edn envelope)))
-    envelope))
+    (parse-message {:command command :testnet? testnet?} (io/input-stream payload))))
 
 (defn wait-for
   [node commands]
   (loop []
-    (let [{:keys [command-name] :as   msg} (receive-message node)]
+    (let [{:keys [command-name] :as  msg} (receive-message node)]
       (cond
         (= command-name "version") (send-message node (VerackMessage. "verack"))
-        (= command-name "ping")  (assoc msg :command-name "pong")
+        (= command-name "ping")  (send-message node (assoc msg :command-name "pong"))
         (contains? commands command-name) msg
         :else (recur)))))
 
@@ -188,3 +190,31 @@
           (= command-name "verack") (recur true version-receieved?) 
           :else (recur verack-received? version-receieved?))))))
 
+(defn validate-blocks
+  []
+  (let [previous (atom (block/parse (io/input-stream block/GENESIS-BLOCK)))
+        hash-previous #(block/hash @previous)
+        first-epoch-timestamp (atom (:timestamp @previous))
+        expected-bits (atom block/LOWEST-BITS)
+        node (simple-node {:host "mainnet.programmingbitcoin.com" :testnet? false :logging? true})
+        count (atom 1)]
+    (handshake node)
+    (dotimes [_ 19]
+      (let [get-headers (get-headers-message-with-defaults {:start-block (hash-previous)})
+            _ (send-message node get-headers)
+            headers (wait-for node #{"headers"})] 
+        (doseq [header (:blocks headers)]
+          (cond 
+            (not (block/valid-pow? header)) (throw (ex-info "Bad PoW at block" {:count @count}))
+            (not (bytes/equals? (:previous-block header) (hash-previous))) (throw (ex-info "Discontinuous block" {:count @count}))
+            (zero? (mod @count 2016)) (let [time-diff (- (:timestamp @previous) @first-epoch-timestamp)]
+                                        (reset! expected-bits (h/calculate-new-bits (:bits @previous) time-diff))
+                                        (println (bytes->hex @expected-bits))
+                                        (reset! first-epoch-timestamp (:timestamp header))))
+          (when (not (bytes/equals? (:bits header) @expected-bits))
+            (throw (ex-info "Bad bits at block" {:count @count :expected-bits (bytes->hex @expected-bits) :header-bits (bytes->hex (:bits header))})))
+          (reset! previous header)
+          (swap! count inc))))))
+
+(comment 
+  (validate-blocks))

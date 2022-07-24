@@ -42,6 +42,7 @@
 (defn fetch-tx
   [tx-id & [testnet?]]
   (let [url (format "%s/tx/%s.hex" (get-url testnet?) tx-id)
+        _ (println (str/trim (slurp url)))
         raw (codecs/hex->bytes (str/trim (slurp url)))] 
     (parse-tx (io/input-stream raw) :testnet? testnet?)))
 
@@ -58,7 +59,7 @@
 (defn serialize-tx-in
   [{:keys [prev-tx prev-index script-sig sequence]}]
   (byte-array (concat (reverse prev-tx)
-                      (h/number->bytes prev-index 4)
+                      (h/number->le-bytes prev-index 4)
                       (script/serialize script-sig)
                       (h/number->le-bytes sequence 4))))
 
