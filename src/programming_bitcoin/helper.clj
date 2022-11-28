@@ -100,3 +100,22 @@
         prev-target (bits->target prev-bits)
         new-target (min MAX_TARGET (/ (* prev-target time-differential) TWO_WEEKS))]
     (target->bits new-target)))
+
+(defn merkle-parent
+  [hash1 hash2]
+  (hash-256 (bytes/concat hash1 hash2)))
+
+(defn merkle-parent-level
+  [hashes]
+  (let [n (count hashes)
+        hashes (vec hashes)]
+    (when (< n 2) 
+      (throw (ex-info "merkle-parent-level requires atleast 2 hashes" {:hashes hashes})))
+    (let [hashes (if (odd? n) (conj hashes (peek hashes)) (vec hashes))]
+      (for [[h1 h2] (partition 2 hashes)] (merkle-parent h1 h2)))))
+
+(defn merkle-root
+  [hashes]
+  (if (= 1 (count hashes))
+    (first hashes)
+    (recur (merkle-parent-level hashes))))
